@@ -115,5 +115,27 @@ func TestParse2(t *testing.T) {
 		t.Error("Parsing invalid configuration with no error!")
 		return
 	}
+}
 
+func TestKeyExist(t *testing.T) {
+	filename, err := tmpConfigFile(ValidConfiguration)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer os.Remove(filename)
+
+	props, err := Load(filename)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if !props.KeyExists("section1") {
+		t.Error("KeyExists('section1') returns false")
+	}
+
+	if props.KeyExists("non_existent") {
+		t.Error("KeyExists('non_existent') returns true")
+	}
 }
