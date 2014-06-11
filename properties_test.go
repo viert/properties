@@ -17,19 +17,36 @@ bind_port = 9345
 [section1]
 float = 4.5
 `
+	InvalidConfiguration = `
+# test configuration
+this is an invalid line
+this_is = valid one
+`
 )
 
-func TestParse1(t *testing.T) {
+func tmpConfigFile(data string) (string, error) {
 	tmp, err := ioutil.TempFile(".", "config_")
 	if err != nil {
-		t.Errorf("Error creating test file: %s", err)
+		return "", err
+	}
+	_, err = tmp.Write([]byte(data))
+	if err != nil {
+		return "", err
+	}
+	tmp.Close()
+	return tmp.Name(), nil
+
+}
+
+func TestParse1(t *testing.T) {
+	filename, err := tmpConfigFile(ValidConfiguration)
+	if err != nil {
+		t.Error(err)
 		return
 	}
-	tmp.Write([]byte(ValidConfiguration))
-	tmp.Close()
-	defer os.Remove(tmp.Name())
+	defer os.Remove(filename)
 
-	props, err := Load(tmp.Name())
+	props, err := Load(filename)
 	if err != nil {
 		t.Error(err)
 		return
@@ -81,6 +98,22 @@ func TestParse1(t *testing.T) {
 	}
 	if flvalue != 4.5 {
 		t.Errorf("Invalid float value of 'section1.float': got %s, expected %s", flvalue, 4.5)
+	}
+
+}
+
+func TestParse2(t *testing.T) {
+	filename, err := tmpConfigFile(InvalidConfiguration)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer os.Remove(filename)
+
+	_, err = Load(filename)
+	if err == nil {
+		t.Error("Parsing invalid configuration with no error!")
+		return
 	}
 
 }
