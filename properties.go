@@ -157,6 +157,11 @@ func (p *Properties) GetFloat(key string) (float64, error) {
 	return f64Value, nil
 }
 
+func (p *Properties) KeyExists(key string) bool {
+	_, err := p.root.findNode(key)
+	return err != NodeNotFound
+}
+
 func (p *Properties) parseFile() error {
 	f, err := os.Open(p.filename)
 	if err != nil {
