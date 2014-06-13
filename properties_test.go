@@ -16,6 +16,7 @@ bind_port = 9345
 
 [section1]
 float = 4.5
+otherkey = othervalue
 `
 	InvalidConfiguration = `
 # test configuration
@@ -138,4 +139,39 @@ func TestKeyExist(t *testing.T) {
 	if props.KeyExists("non_existent") {
 		t.Error("KeyExists('non_existent') returns true")
 	}
+}
+
+func TestSubkeys(t *testing.T) {
+	filename, err := tmpConfigFile(ValidConfiguration)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer os.Remove(filename)
+
+	props, err := Load(filename)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+  expected := make(map[string]bool)
+  expected["float"] = true
+  expected["otherkey"] = true
+
+  skeys, err := props.Subkeys("section1")
+  if err != nil {
+    t.Error(err)
+    return
+  }
+
+  if len(skeys) != 2 {
+    t.Error("Invalid number of subkeys, expected number is 2, found", len(skeys))
+  }
+  for _, key := range skeys {
+    if _, ok := expected[key]; !ok {
+      t.Errorf("Invalid key found '%s', expected ['float', 'otherkey']", key)
+    }
+  }
+
 }

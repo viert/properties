@@ -162,6 +162,20 @@ func (p *Properties) KeyExists(key string) bool {
 	return err != NodeNotFound
 }
 
+func (p *Properties) Subkeys(key string) ([]string, error) {
+  subkeys := make([]string, 0)
+  
+  node, err := p.root.findNode(key)
+  if err != nil {
+    return subkeys, err
+  }
+
+  for key := range node.tree {
+    subkeys = append(subkeys, key)
+  }
+  return subkeys, nil
+}
+
 func (p *Properties) parseFile() error {
 	f, err := os.Open(p.filename)
 	if err != nil {
