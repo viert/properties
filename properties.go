@@ -57,13 +57,6 @@ func newNode(key string, value string, root *propertiesNode) *propertiesNode {
 	return n
 }
 
-func startsWith(source, pattern string) bool {
-	if len(source) < len(pattern) {
-		return false
-	}
-	return source[0:len(pattern)] == pattern
-}
-
 func (n *propertiesNode) put(key, value string) {
 	partialKey := key
 	if n.key != "" {
@@ -71,7 +64,7 @@ func (n *propertiesNode) put(key, value string) {
 			n.value = value
 			return
 		}
-		if !startsWith(key, n.key+".") {
+		if !strings.HasPrefix(key, n.key+".") {
 			n.root.put(key, value)
 			return
 		}
@@ -101,7 +94,7 @@ func (n *propertiesNode) findNode(key string) (*propertiesNode, error) {
 		if key == n.key {
 			return n, nil
 		}
-		if !startsWith(key, n.key+".") {
+		if !strings.HasPrefix(key, n.key+".") {
 			return n.root.findNode(key)
 		}
 		partialKey = strings.Replace(key, n.key+".", "", 1)
