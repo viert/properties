@@ -17,6 +17,12 @@ bind_port = 9345
 [section1]
 float = 4.5
 otherkey = othervalue
+
+bool.true = yes
+bool.false = 0
+bool.anotherfalse = false
+bool.invalid = invalid
+
 `
 	InvalidConfiguration = `
 # test configuration
@@ -101,6 +107,36 @@ func TestParse1(t *testing.T) {
 		t.Errorf("Invalid float value of 'section1.float': got %s, expected %s", flvalue, 4.5)
 	}
 
+	var bv bool
+	bv, err = props.GetBool("section1.bool.true")
+	if err != nil {
+		t.Error(err)
+	}
+	if !bv {
+		t.Errorf("Invalid float value of 'section1.bool.true': got %v, expected %v", bv, true)
+	}
+
+	bv, err = props.GetBool("section1.bool.false")
+	if err != nil {
+		t.Error(err)
+	}
+	if bv {
+		t.Errorf("Invalid float value of 'section1.bool.false': got %v, expected %v", bv, false)
+	}
+
+	bv, err = props.GetBool("section1.bool.anotherfalse")
+	if err != nil {
+		t.Error(err)
+	}
+	if bv {
+		t.Errorf("Invalid float value of 'section1.bool.anotherfalse': got %v, expected %v", bv, false)
+	}
+
+	bv, err = props.GetBool("section1.bool.invalid")
+	if err == nil {
+		t.Error("Bool value section1.bool.invalid should be invalid")
+	}
+
 }
 
 func TestParse2(t *testing.T) {
@@ -155,23 +191,24 @@ func TestSubkeys(t *testing.T) {
 		return
 	}
 
-  expected := make(map[string]bool)
-  expected["float"] = true
-  expected["otherkey"] = true
+	expected := make(map[string]bool)
+	expected["float"] = true
+	expected["otherkey"] = true
+	expected["bool"] = true
 
-  skeys, err := props.Subkeys("section1")
-  if err != nil {
-    t.Error(err)
-    return
-  }
+	skeys, err := props.Subkeys("section1")
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
-  if len(skeys) != 2 {
-    t.Error("Invalid number of subkeys, expected number is 2, found", len(skeys))
-  }
-  for _, key := range skeys {
-    if _, ok := expected[key]; !ok {
-      t.Errorf("Invalid key found '%s', expected ['float', 'otherkey']", key)
-    }
-  }
+	if len(skeys) != 3 {
+		t.Error("Invalid number of subkeys, expected number is 3, found", len(skeys))
+	}
+	for _, key := range skeys {
+		if _, ok := expected[key]; !ok {
+			t.Errorf("Invalid key found '%s', expected ['float', 'otherkey']", key)
+		}
+	}
 
 }

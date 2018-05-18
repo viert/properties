@@ -2,6 +2,8 @@ package properties
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	"os"
 	"regexp"
 	"strconv"
@@ -42,6 +44,8 @@ var (
 	ASSIGNMENT_RE      = regexp.MustCompile(`^\s*([\w\.]+)\s*=\s*(.*)$`)
 	SECTION_RE         = regexp.MustCompile(`^\s*\[([\w\.]+)\]\s*$`)
 	NodeNotFound       = &NodeNotFoundError{}
+	TrueValues         = []string{"true", "yes", "1"}
+	FalseValues        = []string{"false", "no", "0"}
 )
 
 func newNode(key string, value string, root *propertiesNode) *propertiesNode {
@@ -138,6 +142,25 @@ func (p *Properties) GetInt(key string) (int, error) {
 	return int(int64Value), nil
 }
 
+func (p *Properties) GetBool(key string) (bool, error) {
+	value, err := p.GetString(key)
+	if err != nil {
+		return false, err
+	}
+	value = strings.ToLower(value)
+	for _, tv := range TrueValues {
+		if value == tv {
+			return true, nil
+		}
+	}
+	for _, fv := range FalseValues {
+		if value == fv {
+			return false, nil
+		}
+	}
+	return false, errors.New(fmt.Sprintf("invalid boolean value \"%s\"", value))
+}
+
 func (p *Properties) GetFloat(key string) (float64, error) {
 	value, err := p.GetString(key)
 	if err != nil {
@@ -156,17 +179,17 @@ func (p *Properties) KeyExists(key string) bool {
 }
 
 func (p *Properties) Subkeys(key string) ([]string, error) {
-  subkeys := make([]string, 0)
-  
-  node, err := p.root.findNode(key)
-  if err != nil {
-    return subkeys, err
-  }
+	subkeys := make([]string, 0)
 
-  for key := range node.tree {
-    subkeys = append(subkeys, key)
-  }
-  return subkeys, nil
+	node, err := p.root.findNode(key)
+	if err != nil {
+		return subkeys, err
+	}
+
+	for key := range node.tree {
+		subkeys = append(subkeys, key)
+	}
+	return subkeys, nil
 }
 
 func (p *Properties) parseFile() error {
