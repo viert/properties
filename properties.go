@@ -234,6 +234,17 @@ func (p *Properties) parse() error {
 	return nil
 }
 
+// Read reads and parses an io.Reader and returns
+// a newly configured Properties object
+func Read(r io.Reader) (*Properties, error) {
+	p := &Properties{r, newNode("", "", nil)}
+	err := p.parse()
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
 // Load loads a file with a given filename, parses it and returns
 // a newly configured Properties object
 func Load(filename string) (*Properties, error) {
@@ -242,12 +253,5 @@ func Load(filename string) (*Properties, error) {
 		return nil, err
 	}
 	defer f.Close()
-
-	p := &Properties{f, newNode("", "", nil)}
-
-	err = p.parse()
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
+	return Read(f)
 }
