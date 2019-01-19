@@ -79,7 +79,7 @@ func TestParse1(t *testing.T) {
 
 	// reading non-existent property
 	_, err = props.GetString("non_existent")
-	if err != NodeNotFound {
+	if err != nodeNotFound {
 		t.Error("Something wrong happened: non_existent property is found")
 	}
 
@@ -95,7 +95,7 @@ func TestParse1(t *testing.T) {
 		t.Error(err)
 	}
 	if port != 9345 {
-		t.Errorf("Invalid integer value of 'port': got %s, expected %s", port, 9345)
+		t.Errorf("Invalid integer value of 'port': got %d, expected %d", port, 9345)
 	}
 
 	// reading sectioned float property
@@ -104,7 +104,7 @@ func TestParse1(t *testing.T) {
 		t.Error(err)
 	}
 	if flvalue != 4.5 {
-		t.Errorf("Invalid float value of 'section1.float': got %s, expected %s", flvalue, 4.5)
+		t.Errorf("Invalid float value of 'section1.float': got %f, expected %f", flvalue, 4.5)
 	}
 
 	var bv bool

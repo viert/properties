@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strconv"
@@ -17,35 +18,38 @@ type propertiesNode struct {
 	tree  map[string]*propertiesNode
 }
 
+// NodeNotFoundError represents an error
 type NodeNotFoundError struct{}
 
 func (nnf *NodeNotFoundError) Error() string {
-	return "Node not found"
+	return "node not found"
 }
 
+// NoValueError represents an error of an empty-value node
 type NoValueError struct {
 	key string
 }
 
 func (nv *NoValueError) Error() string {
-	return "NoValueError: node '" + nv.key + "' has no value"
+	return "node '" + nv.key + "' has no value"
 }
 
+// ParseError represents a parsing error
 type ParseError struct {
 	msg string
 }
 
 func (pe *ParseError) Error() string {
-	return "ParseError: " + pe.msg
+	return "parse error: " + pe.msg
 }
 
 var (
-	COMMENT_REPLACE_RE = regexp.MustCompile(`\s*#.*$`)
-	ASSIGNMENT_RE      = regexp.MustCompile(`^\s*([\w\.]+)\s*=\s*(.*)$`)
-	SECTION_RE         = regexp.MustCompile(`^\s*\[([\w\.]+)\]\s*$`)
-	NodeNotFound       = &NodeNotFoundError{}
-	TrueValues         = []string{"true", "yes", "1"}
-	FalseValues        = []string{"false", "no", "0"}
+	commentReplaceExpr = regexp.MustCompile(`\s*#.*$`)
+	assignmentExpr     = regexp.MustCompile(`^\s*([\w\.]+)\s*=\s*(.*)$`)
+	sectionExpr        = regexp.MustCompile(`^\s*\[([\w\.]+)\]\s*$`)
+	nodeNotFound       = &NodeNotFoundError{}
+	trueValues         = []string{"true", "yes", "1"}
+	falseValues        = []string{"false", "no", "0"}
 )
 
 func newNode(key string, value string, root *propertiesNode) *propertiesNode {
@@ -109,16 +113,18 @@ func (n *propertiesNode) findNode(key string) (*propertiesNode, error) {
 	childNode, ok := n.tree[firstToken]
 
 	if !ok {
-		return nil, NodeNotFound
+		return nil, nodeNotFound
 	}
 	return childNode.findNode(key)
 }
 
+// Properties is the main module struct
 type Properties struct {
-	filename string
-	root     *propertiesNode
+	rd   io.Reader
+	root *propertiesNode
 }
 
+// GetString returns a string by a given key
 func (p *Properties) GetString(key string) (string, error) {
 	node, err := p.root.findNode(key)
 	if err != nil {
@@ -130,6 +136,7 @@ func (p *Properties) GetString(key string) (string, error) {
 	return node.value, nil
 }
 
+// GetInt returns an int by a given key
 func (p *Properties) GetInt(key string) (int, error) {
 	value, err := p.GetString(key)
 	if err != nil {
@@ -142,18 +149,19 @@ func (p *Properties) GetInt(key string) (int, error) {
 	return int(int64Value), nil
 }
 
+// GetBool returns a boolean by a given key
 func (p *Properties) GetBool(key string) (bool, error) {
 	value, err := p.GetString(key)
 	if err != nil {
 		return false, err
 	}
 	value = strings.ToLower(value)
-	for _, tv := range TrueValues {
+	for _, tv := range trueValues {
 		if value == tv {
 			return true, nil
 		}
 	}
-	for _, fv := range FalseValues {
+	for _, fv := range falseValues {
 		if value == fv {
 			return false, nil
 		}
@@ -161,6 +169,7 @@ func (p *Properties) GetBool(key string) (bool, error) {
 	return false, errors.New(fmt.Sprintf("invalid boolean value \"%s\"", value))
 }
 
+// GetFloat returns a float value by a given key
 func (p *Properties) GetFloat(key string) (float64, error) {
 	value, err := p.GetString(key)
 	if err != nil {
@@ -173,11 +182,13 @@ func (p *Properties) GetFloat(key string) (float64, error) {
 	return f64Value, nil
 }
 
+// KeyExists checks if a key exists
 func (p *Properties) KeyExists(key string) bool {
 	_, err := p.root.findNode(key)
-	return err != NodeNotFound
+	return err != nodeNotFound
 }
 
+// Subkeys returns a list of subkeys of a given key
 func (p *Properties) Subkeys(key string) ([]string, error) {
 	subkeys := make([]string, 0)
 
@@ -192,30 +203,25 @@ func (p *Properties) Subkeys(key string) ([]string, error) {
 	return subkeys, nil
 }
 
-func (p *Properties) parseFile() error {
-	f, err := os.Open(p.filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+func (p *Properties) parse() error {
 
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(p.rd)
 	currentSection := ""
 	for scanner.Scan() {
 		text := scanner.Text()
-		line := COMMENT_REPLACE_RE.ReplaceAllString(text, "")
+		line := commentReplaceExpr.ReplaceAllString(text, "")
 		line = strings.Trim(line, " \t\n")
 		if line == "" {
 			continue
 		}
 
-		match := SECTION_RE.FindStringSubmatch(line)
+		match := sectionExpr.FindStringSubmatch(line)
 		if len(match) > 0 {
 			currentSection = match[1] + "."
 			continue
 		}
 
-		match = ASSIGNMENT_RE.FindStringSubmatch(line)
+		match = assignmentExpr.FindStringSubmatch(line)
 		if len(match) > 0 {
 			key := currentSection + match[1]
 			value := match[2]
@@ -228,12 +234,18 @@ func (p *Properties) parseFile() error {
 	return nil
 }
 
+// Load loads a file with a given filename, parses it and returns
+// a newly configured Properties object
 func Load(filename string) (*Properties, error) {
-	p := &Properties{
-		filename,
-		newNode("", "", nil),
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
 	}
-	err := p.parseFile()
+	defer f.Close()
+
+	p := &Properties{f, newNode("", "", nil)}
+
+	err = p.parse()
 	if err != nil {
 		return nil, err
 	}
