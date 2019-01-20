@@ -212,3 +212,40 @@ func TestSubkeys(t *testing.T) {
 	}
 
 }
+
+func TestSubkeysRoot(t *testing.T) {
+	filename, err := tmpConfigFile(ValidConfiguration)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer os.Remove(filename)
+
+	props, err := Load(filename)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	expected := make(map[string]bool)
+	expected["source"] = true
+	expected["destination"] = true
+	expected["bind_port"] = true
+	expected["section1"] = true
+
+	skeys, err := props.Subkeys("")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if len(skeys) != 4 {
+		t.Error("Invalid number of subkeys, expected number is 4, found", len(skeys))
+	}
+	for _, key := range skeys {
+		if _, ok := expected[key]; !ok {
+			t.Errorf("Invalid key found '%s'", key)
+		}
+	}
+
+}

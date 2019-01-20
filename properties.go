@@ -190,13 +190,19 @@ func (p *Properties) KeyExists(key string) bool {
 
 // Subkeys returns a list of subkeys of a given key
 func (p *Properties) Subkeys(key string) ([]string, error) {
-	subkeys := make([]string, 0)
+	var node *propertiesNode
+	var err error
 
-	node, err := p.root.findNode(key)
-	if err != nil {
-		return subkeys, err
+	if key == "" {
+		node = p.root
+	} else {
+		node, err = p.root.findNode(key)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	subkeys := make([]string, 0)
 	for key := range node.tree {
 		subkeys = append(subkeys, key)
 	}
